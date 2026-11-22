@@ -99,25 +99,27 @@ def most (p q : OnePlacePred) : Bool :=
 -- e **at most n**. Depois, prove as sentenças abaixo.
 
 def atLeastDet (n : Nat) (p q : OnePlacePred) : Bool :=
-  sorry
+  (entities.filter ( fun x => p x  && q x)).length ≥  n
+
 
 def atMostDet (n : Nat) (p q : OnePlacePred) : Bool :=
-  sorry
+  (entities.filter ( fun x => p x  && q x)).length   ≤  n
+
+
 
 theorem atLeastTwoGirlsLaughed :
     Rule.sent (Rule.npDet (atLeastDet 2) girl) laugh
       = true := by
-  sorry
+  rfl
 
 theorem atMostOneDwarfLaughed :
     Rule.sent (Rule.npDet (atMostDet 1) dwarf) laugh
       = true := by
-  sorry
+  rfl
 
 theorem notAtLeastThreeGirlsLaughed :
     Rule.sent (Rule.npDet (atLeastDet 3) girl) laugh
       = false := by
-  sorry
+  rfl
 
 end Composition
-
