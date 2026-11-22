@@ -29,15 +29,16 @@ def check (f : LF) : Bool :=
 
 open FOL in
 def atMostTwo (a b : String) : LF :=
-  sorry
+  let  ab (t : Term) : LF := .conj (.atom a [t]) (.atom b [t])
+  .forall_ x (.forall_ y  (.forall_ z (.impl (.conjs [ab tx,  ab ty,  ab  tz ]) ( .disj (.eq tx ty) (.disj (.eq tx tz) (.eq ty tz) )))))
 
 theorem atMostTwo_girl :
     check (atMostTwo "girl" "laugh") = true :=
-  sorry
+  by native_decide
 
 theorem atMostTwo_person :
     check (atMostTwo "person" "laugh") = false :=
-  sorry
+  by native_decide
 
 -- ### Exercise (3 stars): at-least-n ⭐⭐⭐
 
@@ -48,25 +49,37 @@ theorem atMostTwo_person :
 -- variável seja diferente de todos eles.
 
 open FOL in
+
+
 def atLeastFrom (a b : String) (n : Nat) (ts : List Term) :
     LF :=
-  sorry
+  match n with
+  | 0 => .conjs []
+  | n + 1=>
+    let v : Variable :=  {name := "x", index := [n]}
+    let t : Term := .var v
+    .exists_ v (.conjs (
+      [.atom a [t], .atom b [t]] ++
+      ts.map (fun t' => .neg (.eq t t')) ++
+      [atLeastFrom   a b n (t::ts) ]
+    ))
 
 def atLeast (n : Nat) (a b : String) : LF :=
-  sorry
+  atLeastFrom a b  n []
+
 
 def atMost (n : Nat) (a b : String) : LF :=
-  sorry
+  .neg (atLeast (n+1)  a b)
 
 theorem atLeast_person :
     check (atLeast 3 "person" "laugh") = true ∧
       check (atLeast 4 "person" "laugh") = false :=
-  sorry
+  by native_decide
 
 theorem atMost_girl :
     check (atMost 2 "girl" "laugh") = true ∧
       check (atMost 1 "girl" "laugh") = false :=
-  sorry
+  by native_decide
 
 -- ## A visão relacional dos quantificadores
 
@@ -125,12 +138,18 @@ theorem every_iff_all (p q : OnePlacePred) :
 
 theorem all_imp_some {α : Type} (E A B : Set α)
     (hA : ∃ x, x ∈ A) (h : all E A B) : some E A B := by
-  sorry
+    obtain ⟨x, hA⟩ := hA
+    exact   ⟨x, hA, h hA⟩
 
+
+-- St.univ é o conjunto universal do lean
 theorem all_not_imp_some :
     ¬ ∀ (A B : Set Entity),
         all Set.univ A B → some Set.univ A B := by
-  sorry
+  intro h
+  obtain ⟨x, hA⟩ := h ∅ ∅ (fun _ hx => hx)
+  exact hA.1
+
 
 def Ext {α : Type} (D : Det α) : Prop :=
   ∀ E E' A B, A ⊆ E → B ⊆ E → E ⊆ E' → (D E A B ↔ D E' A B)
@@ -169,7 +188,13 @@ theorem some_cons {α : Type} : Cons (some : Det α) := by
 -- Prove que **no** é conservativo.
 
 theorem no_cons {α : Type} : Cons (no : Det α) := by
-  sorry
+  intro E A B _ _
+  constructor
+  · intro h x hx hAB
+    exact h x hx hAB.2
+  · intro h x hx hB
+    exact h x hx ⟨hx,  hB⟩
+
 
 def many {α : Type} : Det α :=
   fun E A B => E.ncard < 2 * (A ∩ B).ncard
@@ -180,7 +205,11 @@ def many {α : Type} : Det α :=
 -- vale e um universo maior `E'` em que ela deixa de valer.
 
 theorem many_not_ext : ¬ Ext (many : Det Nat) := by
-  sorry
+  intro h
+  have h' :=  h {0} {0, 1} {0} {0} (by simp ) (by simp) (by simp)
+  simp [many] at h'
+
+
 
 -- ### Exercise (2 stars): only-not-cons ⭐⭐
 
@@ -189,7 +218,12 @@ theorem many_not_ext : ¬ Ext (many : Det Nat) := by
 -- diferentes.
 
 theorem only_not_cons : ¬ Cons (only : Det Entity) := by
-  sorry
+  intro h
+  have h' := h Set.univ  ∅  Set.univ ( by simp) (by simp)
+  simp [only] at h'
+  exact h'.false .A -- só bastou dar uma exemplo
+
+
 
 def Isom {α : Type} (D : Det α) : Prop :=
   ∀ (f : α → α) E E' A B, A ⊆ E → B ⊆ E →
@@ -216,13 +250,22 @@ def the {α : Type} : Det α :=
   fun _ A B => ∃ x, A = {x} ∧ x ∈ B
 
 theorem the_ext {α : Type} : Ext (the : Det α) := by
-  sorry
+  intro E  E' A B hA hB He
+  rfl
 
 theorem the_cons {α : Type} : Cons (the : Det α) := by
-  sorry
+  intro E A B _ _
+  constructor
+  · intro ⟨x, hA, hB ⟩
+    exact ⟨x, hA,  ⟨ by simp [hA], hB⟩⟩
+  · intro ⟨x, hA, hAB ⟩
+    exact ⟨x, hA,   hAB.2⟩
 
 theorem the_isom {α : Type} : Isom (the : Det α) := by
-  sorry
+  intro f _ _ _ _ _   _ _  ⟨x, hA, hB ⟩
+  exact  ⟨f x , by simp [hA], ⟨x, hB, rfl ⟩ ⟩
+
+
 
 -- ### Exercise (3 stars): poss-not-isom ⭐⭐⭐
 
@@ -241,15 +284,33 @@ def poss {α : Type} (owns : α → α → Prop) (a : α) : Det α :=
 
 theorem poss_ext {α : Type} (owns : α → α → Prop) (a : α) :
     Ext (poss owns a) := by
-  sorry
+    intro E E' A B _ _ _
+    rfl
+
 
 theorem poss_cons {α : Type} (owns : α → α → Prop) (a : α) :
     Cons (poss owns a) := by
-  sorry
+  intro E  A B _ _
+  constructor
+  · intro h x hx hown
+    exact ⟨hx, h x  hx hown  ⟩
+
+  · intro h x hx hown
+    exact  (h x  hx hown).2
 
 theorem poss_not_isom :
     ¬ Isom (poss (fun _ x => x = true) false) := by
-  sorry
+  intro h
+  have h' := h not Set.univ Set.univ {false} ∅
+    (Set.subset_univ _)
+    (Set.subset_univ _)
+    ⟨fun _ _ => trivial,
+     fun a _ b _ hab => by cases a <;> cases b <;> simp_all,
+     fun y _ => ⟨not y, trivial, by simp⟩⟩
+    (by intro x hx htrue; simp_all)
+  have hcontra := h' true (by simp) rfl
+  simp_all
+
 
 end GQ
 
@@ -287,13 +348,16 @@ def numberTree (k : Nat) : String :=
 -- para baixo e da esquerda para a direita.
 
 def treeOfNumbers (k : Nat) : List (Nat × Nat) :=
-  sorry
+  (tree k).flatten
+
+#eval  treeOfNumbers 3
 
 theorem treeOfNumbers_three :
     treeOfNumbers 3 =
       [(0, 0), (1, 0), (0, 1), (2, 0), (1, 1), (0, 2),
        (3, 0), (2, 1), (1, 2), (0, 3)] :=
-  sorry
+  by rfl
+
 
 def patternTree (k : Nat) (q : Nat → Nat → Bool) :
     String :=
@@ -315,21 +379,26 @@ abbrev ListQuant := List Nat → (Nat → Bool) → Bool
 -- propriedade B.
 
 def genTree (q : ListQuant) (k : Nat) : List (Nat × Nat) :=
-  sorry
+  (treeOfNumbers k).filter fun (m, n ) =>
+   q (List.range (m+n)) (fun  x=> decide (x < n))
+
+
+
 
 theorem genTree_all :
     genTree List.all 3 = [(0, 0), (0, 1), (0, 2), (0, 3)] :=
-  sorry
+  by rfl
 
 theorem genTree_any :
     genTree List.any 3 =
       [(0, 1), (1, 1), (0, 2), (2, 1), (1, 2), (0, 3)] :=
-  sorry
+  by rfl
 
 theorem genTree_no :
     genTree (fun dom p => !dom.any p) 3 =
       [(0, 0), (1, 0), (2, 0), (3, 0)] :=
-  sorry
+  by rfl
+
 
 -- ## Representações lógicas para quantificadores
 
@@ -383,27 +452,46 @@ def atLeast3ButNotAll : NumQuant :=
 -- aritmética.
 
 def someNum : NumQuant :=
-  sorry
+  fun _ n  => n > 0
 
 def notAllNum : NumQuant :=
-  sorry
+  fun m _  => m != 0
+
 
 def exactlyNum (k : Nat) : NumQuant :=
-  sorry
+  fun _ n => (n==k)
+
+
 
 theorem someNum_eq : someNum = notNum noNum := by
-  sorry
+  funext m n
+  rw [Bool.eq_iff_iff] --- faz: ele usa o fato de que dois booleanos são iguais se, e somente se, derem true exatamente nas mesmas situações — trocando a = b por a = true ↔ b = true.
+
+  simp [someNum, notNum,noNum]
+  omega
 
 theorem notAllNum_eq : notAllNum = notNum allNum := by
-  sorry
+  funext m n
+  rw [Bool.eq_iff_iff]
+  simp [notAllNum,  notNum,  allNum ]
 
 theorem exactlyNum_eq (k : Nat) :
     exactlyNum k = andNum (atLeastNum k) (atMostNum k) := by
-  sorry
+  funext m n
+  rw [Bool.eq_iff_iff]
+  simp [exactlyNum,  andNum,  atLeastNum, atMostNum ]
+  omega
+
+
+
 
 theorem atMostNum_eq (k : Nat) :
     atMostNum k = notNum (atLeastNum (k + 1)) := by
-  sorry
+  funext m n
+  rw [Bool.eq_iff_iff]
+  simp [atMostNum, notNum, atLeastNum]
+
+
 
 -- ## Propriedades relacionais
 
@@ -421,7 +509,9 @@ theorem all_refl {α : Type} : Refl (all : Det α) := by
 -- Prove que **some** não é reflexivo.
 
 theorem some_not_refl : ¬ Refl (some : Det Entity) := by
-  sorry
+  intro h
+  have h0 := h ∅ ∅ (by intro x hx; exact hx)
+  simp [some] at h0
 
 def ReflNum (q : NumQuant) : Prop :=
   ∀ n, q 0 n
@@ -464,16 +554,25 @@ theorem some_symm {α : Type} : Symm (some : Det α) := by
 -- não são A. O que muda entre os dois é só `m`.
 
 def SymmNum (q : NumQuant) : Prop :=
-  sorry
+  ∀ m m' n, q m  n = q m' n
 
 theorem noNum_symm : SymmNum noNum := by
-  sorry
+  intro h a b
+  rfl
+
 
 theorem atLeastNum_symm : SymmNum (atLeastNum 3) := by
-  sorry
+  intro h a  b
+  rfl
+
 
 theorem allNum_not_symm : ¬ SymmNum allNum := by
-  sorry
+  intro h
+  have h0 := h 0 1 1
+  simp [allNum] at h0
+
+
+
 
 def MonUp {α : Type} (D : Det α) : Prop :=
   ∀ E A B B', A ⊆ E → B ⊆ B' → B' ⊆ E →
@@ -492,7 +591,9 @@ theorem all_monUp {α : Type} : MonUp (all : Det α) := by
 -- Prove que **no** é MON↓.
 
 theorem no_monDown {α : Type} : MonDown (no : Det α) := by
-  sorry
+  unfold MonDown no
+  intro E A B B' hAE hB'B hBE hno x hxA hxB'
+  exact  (hno x  hxA) (hB'B hxB')
 
 end GQ
 
@@ -525,10 +626,15 @@ theorem noNum_monDown : MonDownNum noNum := by
 -- padrão em que a forma falha.
 
 theorem evenNum_not_monUp : ¬ MonUpNum evenNum := by
-  sorry
+  intro h
+  have h0 := h 0 0
+  simp [ evenNum] at h0
 
 theorem evenNum_not_monDown : ¬ MonDownNum evenNum := by
-  sorry
+  intro h
+  have h0 := h 0  1
+  simp [evenNum] at h0
+
 
 -- ### Exercise (2 stars): mon-not ⭐⭐
 
@@ -536,11 +642,26 @@ theorem evenNum_not_monDown : ¬ MonDownNum evenNum := by
 
 theorem notNum_monUp (q : NumQuant) (h : MonUpNum q) :
     MonDownNum (notNum q) := by
-  sorry
+  unfold MonDownNum  notNum
+  intro m n h1
+  cases  hq : q (m + 1) n
+  · simp
+  · have h2 := h m n hq
+    simp  [  h2 ] at h1
+
+
+
+
 
 theorem notNum_monDown (q : NumQuant) (h : MonDownNum q) :
     MonUpNum (notNum q) := by
-  sorry
+  unfold MonUpNum notNum
+  intro  m n h1
+  cases hq:  q m (n+1)
+  · simp
+  · have h2 := h m n  hq
+    simp [h2] at h1
+
 
 -- ### Exercise (2 stars): mon-and ⭐⭐
 
@@ -550,12 +671,21 @@ theorem notNum_monDown (q : NumQuant) (h : MonDownNum q) :
 theorem andNum_monUp (q₁ q₂ : NumQuant)
     (h₁ : MonUpNum q₁) (h₂ : MonUpNum q₂) :
     MonUpNum (andNum q₁ q₂) := by
-  sorry
+  unfold MonUpNum andNum
+  intro m n h
+  simp at h
+  simp [h₁ m n h.1 , h₂ m n h.2 ]
+
+
+
 
 theorem andNum_monDown (q₁ q₂ : NumQuant)
     (h₁ : MonDownNum q₁) (h₂ : MonDownNum q₂) :
     MonDownNum (andNum q₁ q₂) := by
-  sorry
+  unfold MonDownNum andNum
+  intro m n h
+  simp at h
+  simp [h₁ m n h.1, h₂ m n h.2 ]
 
 -- ### Exercise (2 stars): mon-or ⭐⭐
 
@@ -565,12 +695,22 @@ theorem andNum_monDown (q₁ q₂ : NumQuant)
 theorem orNum_monUp (q₁ q₂ : NumQuant)
     (h₁ : MonUpNum q₁) (h₂ : MonUpNum q₂) :
     MonUpNum (orNum q₁ q₂) := by
-  sorry
+  unfold MonUpNum orNum
+  intro m n h
+  simp at  h
+  cases h with
+  | inl hq => simp [h₁ m n hq  ]
+  | inr hq =>  simp [h₂ m n hq  ]
 
 theorem orNum_monDown (q₁ q₂ : NumQuant)
     (h₁ : MonDownNum q₁) (h₂ : MonDownNum q₂) :
     MonDownNum (orNum q₁ q₂) := by
-  sorry
+  unfold MonDownNum orNum
+  intro m n h
+  simp at h
+  cases h  with
+  | inl hq => simp [h₁ m n hq  ]
+  | inr hq =>  simp [h₂ m n hq  ]
 
 -- ### Exercise (3 stars): mon-up-down ⭐⭐⭐
 
@@ -585,13 +725,35 @@ theorem andNum_up_down :
     ¬ ∀ q₁ q₂, MonUpNum q₁ → MonDownNum q₂ →
       MonUpNum (andNum q₁ q₂) ∨
         MonDownNum (andNum q₁ q₂) := by
-  sorry
+  intro h
+  have h0:=h  (atLeastNum 1) (atMostNum 3)
+    (atLeastNum_monUp 1)
+    (by intro m n h; simp [atMostNum] at *; omega)
+  cases h0 with
+  |inl hup=>
+    have h1 := hup 0 3
+    simp [andNum, atLeastNum, atMostNum] at h1
+  | inr hdown =>
+    have h1 := hdown 0 0
+    simp [andNum, atLeastNum, atMostNum] at h1
+
 
 theorem orNum_up_down :
     ¬ ∀ q₁ q₂, MonUpNum q₁ → MonDownNum q₂ →
       MonUpNum (orNum q₁ q₂) ∨
         MonDownNum (orNum q₁ q₂) := by
-  sorry
+  intro h
+  have h0 := h (atLeastNum 3) (atMostNum 1)
+    (atLeastNum_monUp 3)
+    (by intro m n h; simp [atMostNum] at *; omega)
+  cases h0 with
+  | inl hup =>
+    have h1 := hup 0 1
+    simp [orNum, atLeastNum, atMostNum] at h1
+  | inr hdown =>
+    have h1 := hdown 0 2
+    simp [orNum, atLeastNum, atMostNum] at h1
+
 
 -- ### Exercise (2 stars): left-mon-pattern ⭐⭐
 
@@ -603,22 +765,39 @@ theorem orNum_up_down :
 -- em `B`, ou `m`, se não está.
 
 def UpMonNum (q : NumQuant) : Prop :=
-  sorry
+  ∀ m n , q m n → q (m+1 ) n ∧ q  m (n +1)
 
 def DownMonNum (q : NumQuant) : Prop :=
-  sorry
+  ∀ m n, (q (m+1)   n → q m n) ∧ (  q m   (n+1)  → q m n)
+
+
 
 theorem some_upMon : UpMonNum (notNum noNum) := by
-  sorry
+  intro m n h
+  simp [notNum, noNum] at *
+  exact h
+
 
 theorem notAll_upMon : UpMonNum (notNum allNum) := by
-  sorry
+  intro m n h
+  simp [notNum, allNum] at *
+  exact h
+
 
 theorem all_downMon : DownMonNum allNum := by
-  sorry
+  intro m n
+  constructor
+  · simp [allNum] at *
+
+  · simp [allNum] at *
 
 theorem no_downMon : DownMonNum noNum := by
-  sorry
+  intro m n
+  constructor
+  · simp [noNum] at *
+
+  · simp [noNum] at *
+
 
 -- ## Quantificadores, autômatos e definibilidade
 
@@ -662,11 +841,15 @@ theorem langOf_notNum (q : NumQuant) :
 
 theorem langOf_andNum (q₁ q₂ : NumQuant) :
     langOf (andNum q₁ q₂) = langOf q₁ ⊓ langOf q₂ := by
-  sorry
+  ext w
+  show accepts (andNum q₁ q₂) w ↔ ( accepts  q₁ w  ∧  accepts q₂ w)
+  simp [accepts,  andNum]
 
 theorem langOf_orNum (q₁ q₂ : NumQuant) :
     langOf (orNum q₁ q₂) = langOf q₁ + langOf q₂ := by
-  sorry
+  ext w
+  show accepts (orNum q₁ q₂ ) w ↔ (accepts q₁  w ∨ accepts q₂  w  )
+  simp [accepts, orNum]
 
 -- ### Exercise (3 stars): all-kstar ⭐⭐⭐
 
@@ -675,7 +858,34 @@ theorem langOf_orNum (q₁ q₂ : NumQuant) :
 open Computability in
 theorem langOf_allNum :
     langOf allNum = ({[true]} : Language Bool)∗ := by
-  sorry
-
+  ext w
+  rw [mem_langOf, accepts, allNum, Language.mem_kstar]
+  simp
+  constructor
+  · intro h
+    use List.replicate w.length [true]
+    constructor
+    · induction w with
+      | nil => rfl
+      | cons b tail ih =>
+        cases b
+        · simp at h
+        · simp at h
+          rw [List.length_cons, List.replicate_succ, List.flatten_cons, List.singleton_append]
+          congr 1
+          exact ih h
+    · intro y hy
+      rw [List.mem_replicate] at hy
+      rw [hy.2]
+      rfl
+  · rintro ⟨L, rfl, hL⟩
+    induction L with
+    | nil => simp
+    | cons head tail ih =>
+      have h_head : head = [true] := hL head (by simp)
+      rw [h_head]
+      simp
+      apply ih
+      intro y hy
+      exact hL y (by simp [hy])
 end Composition
-

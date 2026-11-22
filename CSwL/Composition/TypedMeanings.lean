@@ -77,7 +77,7 @@ end Rule
 namespace Rule
 
 def snowWhiteHelped (r : TwoPlacePred) : Bool :=
-  sorry
+  sent (npName snowWhite ) (vpTrans r (npDet some (npName dwarf)))
 
 def snowWhiteHelpedNF (r : TwoPlacePred) : Bool :=
   sorry
@@ -89,4 +89,3 @@ theorem snowWhiteHelped_nf (r : TwoPlacePred) :
 end Rule
 
 end Composition
-

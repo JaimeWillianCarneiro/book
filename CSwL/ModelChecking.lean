@@ -361,12 +361,12 @@ instance : ToString SentAnd := ⟨SentAnd.toText⟩
 
 def sent2 : SentAnd :=
   .coord (.base (.sent .alice .laughed)) .and
-         (.base (.sent .dorothy .cheered))
+          (.base (.sent .dorothy .cheered))
 
 #eval toString sent2
 
 -- Os dois exercícios a seguir estendem o fragmento por esse caminho.
-
+-- 8. Verificação de mo
 -- ### Exercise (2 stars): preposition-phrase ⭐⭐
 
 -- Estenda o fragmento com sintagmas preposicionais, de modo que a sentença
@@ -414,17 +414,23 @@ deriving Repr
 -- Complete as funções que devolvem a sentença de superfície.
 
 def NPP.toText : NPP → String :=
-  sorry
+  fun
+  | .withPP det cn pp => s!"{det} {cn} {pp}"
 
 instance : ToString NPP := ⟨NPP.toText⟩
 
 def VPP.toText : VPP → String :=
-  sorry
+  fun
+  | .base vp  => s!"{vp.toText}"
+  | .objPP tv np =>s!"{tv} {np.toText}"
+  | .vpPP tv np pp =>s!"{tv} {np.toText} {pp}"
 
 instance : ToString VPP := ⟨VPP.toText⟩
 
 def SentPP.toText : SentPP → String :=
-  sorry
+  fun
+  | .sent np vp => s!"{np.toText} {vp.toText}"
+
 
 instance : ToString SentPP := ⟨SentPP.toText⟩
 
@@ -435,27 +441,33 @@ instance : ToString SentPP := ⟨SentPP.toText⟩
 def withSword : PP := .pp .with (.npDet .a .sword)
 
 def giantSword1 : SentPP :=
-  sorry
+  .sent (.npDet .a .dwarf) (.objPP .defeated (.withPP .a .giant withSword))
+
+
 
 def giantSword2 : SentPP :=
-  sorry
+  .sent  (.npDet .a .dwarf ) (.vpPP .defeated  (.npDet .a .giant ) withSword)
 
+
+-- .littleMook é um construtor independente
 def mookSword : SentPP :=
-  sorry
+  .sent (.npDet .a .dwarf) (.vpPP .defeated ( .littleMook ) withSword)
 
 example
   : toString giantSword1 = toString giantSword2 :=
-  sorry
+  by rfl
+
+
 
 example
   : toString giantSword1 =
     "a dwarf defeated a giant with a sword" :=
-  sorry
+  by rfl
 
 example
   : toString mookSword =
      "a dwarf defeated Little Mook with a sword" :=
-  sorry
+  by rfl
 
 -- As duas primeiras árvores são diferentes e imprimem a mesma sentença: é a
 -- ambiguidade pedida.
@@ -488,28 +500,34 @@ deriving Repr
 -- Complete as funções de superfície e construa a sentença do enunciado.
 
 def RCNC.toText : RCNC → String :=
-  sorry
+  fun
+  | .vpAnd cn compl left c right => s!"{cn} {compl} {left.toText} {c} {right.toText}"
+  | .objAnd cn compl np1 tv1 c np2 tv2 => s!"{cn} {compl} {np1.toText} {tv1} {c} {np2.toText} {tv2}"
 
 instance : ToString RCNC := ⟨RCNC.toText⟩
 
 def NPC.toText : NPC → String :=
-  sorry
+  fun
+  | .base np => s!"{np.toText}"
+  | .npDetRel det  rcn => s!"{det} {rcn.toText}"
+  -- o rcn é do tipo RCNC (oração relativa )
 
 instance : ToString NPC := ⟨NPC.toText⟩
 
 def SentC.toText : SentC → String :=
-  sorry
+  fun
+  | .sent  np vp => s!"{np.toText} {vp.toText}"
 
 instance : ToString SentC := ⟨SentC.toText⟩
 
 def dwarfHelpedAdmired : SentC :=
-  sorry
+  .sent (.npDetRel .the (.objAnd .dwarf .that .snowWhite .helped   .and .goldilocks .admired )   ) (.cheered)
 
 example :
     toString dwarfHelpedAdmired =
       "the dwarf that Snow White helped and " ++
         "Goldilocks admired cheered" :=
-  sorry
+  by rfl
 
 -- ## FOL como Linguagem de representação
 
@@ -802,37 +820,41 @@ def lf3 : LF :=
 -- disso, `#eval toString (lfSent tr1)` exibe a forma lógica da primeira.
 
 def tr1 : Sent :=
-  sorry
+  .sent (.npDetRel .every  (.rcnSubj .girl .that .laughed)) ( .vpTrans .helped (.npDet .a .boy) )
+
 
 def tr2 : Sent :=
-  sorry
+  .sent (.npDetRel .no (.rcnSubj .giant .that .shuddered) ) (.vpTrans .defeated (.npDet .every .dwarf))
 
 def tr3 : Sent :=
-  sorry
-
+  .sent (.npDet .every .princess)
+    (.vpTrans .loved
+      (.npDetRel .every
+        (.rcnSubj .dwarf .that
+          (.vpTrans .defeated (.npDet .a .giant)))))
 def tr4 : Sent :=
-  sorry
-
+  .sent (.npDet .every .boy) (.vpTrans .admired (.npDetRel .a (.rcnObj .girl .that (.npDet .no .wizard) .helped)))
 theorem tr1_surface :
     toString tr1 =
       "every girl that laughed helped a boy" :=
-  sorry
+  by rfl
 
 theorem tr2_surface :
     toString tr2 =
       "no giant that shuddered defeated every dwarf" :=
-  sorry
+    by rfl
 
 theorem tr3_surface :
     toString tr3 =
       "every princess loved every dwarf " ++
         "that defeated a giant" :=
-  sorry
+  by rfl
 
 theorem tr4_surface :
     toString tr4 =
       "every boy admired a girl that no wizard helped" :=
-  sorry
+  by rfl
+
 
 -- Temos agora representações de sentenças declarativas da língua natural como
 -- fórmulas da lógica de predicados. Falta dizer quando essas fórmulas são
@@ -1045,18 +1067,23 @@ def introduced : ThreePlacePred :=
   list3 [(.A, .B, .A), (.S, .B, .E)]
 
 def self3DO (p : ThreePlacePred) : TwoPlacePred :=
-  sorry
+  λ x y => p x y x
 
 def self3IO (p : ThreePlacePred) : TwoPlacePred :=
-  sorry
+  λ x y => p  x  x y
 
 theorem self3DO_introduced :
-    self3DO introduced .A .B = true :=
-  sorry
+    self3DO introduced .A .B = true := by
+  unfold self3DO introduced
+  rfl
+  --  introduced: predicado de três lugares e aplicar arugemtnos de 3 lugares
+  -- etem que desdobrar a definição
+
 
 theorem self3IO_introduced :
-    self3IO introduced .A .B = false :=
-  sorry
+    self3IO introduced .A .B = false := by
+  unfold self3IO introduced
+  rfl
 
 -- ### Interpretando os símbolos
 
@@ -1130,26 +1157,29 @@ def loveReflexive : LF :=
 -- interpretações `intFairy` e `fintFairy` e com a atribuição `ass0`.
 
 def checkSentence (s : Sent) : Bool :=
-  sorry
+  (lfSent s).eval entities intFairy ass0
+     ( liftAssign fintFairy)
+#eval checkSentence (.sent .goldilocks .laughed)
 
 theorem goldilocksLaughed :
     checkSentence (.sent .goldilocks .laughed) = true :=
-  sorry
+  by  native_decide
 
 theorem dorothyLaughed :
     checkSentence (.sent .dorothy .laughed) = false :=
-  sorry
+  by native_decide
+
 
 theorem someDwarfDefeatedSomeGiant :
     checkSentence
       (.sent (.npDet .some .dwarf)
              (.vpTrans .defeated (.npDet .some .giant)))
       = true :=
-  sorry
+  by native_decide
 
 theorem everyoneCheered :
     checkSentence (.sent .everyone .cheered) = false :=
-  sorry
+  by native_decide
 
 -- Temos assim um procedimento de interpretação indireta para o fragmento, em
 -- dois passos: primeiro construímos uma forma lógica a partir da expressão da
@@ -1197,11 +1227,21 @@ def sentences : List Sent :=
         Sent.sent subj (.vpTrans v obj)
 
 def values : List Bool :=
-  sorry
+  [ -- Alice (helped, defeated)
+    false, false, false, false,
+    false, false, true,  false,
+    -- Snow White (helped, defeated)
+    false, false, false, true,
+    false, false, false, false,
+    -- every wizard (helped, defeated)
+    false, false, false, false,
+    false, false, false, false,
+    -- a dwarf (helped, defeated)
+    false, false, false, false,
+    false, false, false, false ]
 
 theorem values_correct :
     sentences.map checkSentence = values :=
-  sorry
+  by native_decide
 
 end ModelChecking
-

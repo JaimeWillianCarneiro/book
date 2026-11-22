@@ -339,6 +339,8 @@ example {α β : Type} (l : β)
 -- ter sucesso deixando a entrada intacta, `many1 p` pode voltar a chamar a si
 -- mesmo sobre a mesma lista.
 
+
+--  Pergunta boa: o que esses Parrser fazem nesse caso 
 partial def many1 {α β : Type} (p : Parser α β) :
     Parser α (List β) :=
   (do
@@ -497,4 +499,3 @@ theorem palindrome_aba :
 -- `ADJ` uma ou mais vezes.
 
 end Parsing
-
