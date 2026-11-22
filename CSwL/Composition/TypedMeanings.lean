@@ -77,14 +77,14 @@ end Rule
 namespace Rule
 
 def snowWhiteHelped (r : TwoPlacePred) : Bool :=
-  sent (npName snowWhite ) (vpTrans r (npDet some (npName dwarf)))
+  sent (npName snowWhite ) (vpTrans r (npDet a  dwarf))
 
 def snowWhiteHelpedNF (r : TwoPlacePred) : Bool :=
-  sorry
+  a dwarf (fun y => r snowWhite y)
 
 theorem snowWhiteHelped_nf (r : TwoPlacePred) :
     snowWhiteHelped r = snowWhiteHelpedNF r := by
-  sorry
+  rfl
 
 end Rule
 
